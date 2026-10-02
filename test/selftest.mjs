@@ -13,7 +13,7 @@ import { mkdtemp, mkdir, rm, symlink, writeFile, readFile, readdir } from 'node:
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { canonical, containsPath, isAbsolutePath, isHiddenEntry, relativeSegments, baseName } from '../lib/host/paths.js'
+import { canonical, containsPath, fold, isAbsolutePath, isHiddenEntry, normalizeAbsolute, relativeSegments, baseName } from '../lib/host/paths.js'
 import { ConfigStore, describeConfig, pluginDataDir, resolveDshHome } from '../lib/host/store.js'
 import { listDirectory, ExplorerError } from '../lib/host/listing.js'
 import { deleteSessionData } from '../lib/host/sessions.js'
@@ -60,6 +60,26 @@ check('computes an empty relative path for the root', relativeSegments('D:\\deep
 check('returns undefined outside the root', relativeSegments('D:\\deepseek', 'D:\\other') === undefined)
 check('classifies POSIX and Windows absolutes', isAbsolutePath('/etc/hosts') && isAbsolutePath('D:/x') && isAbsolutePath('\\\\srv\\share') && !isAbsolutePath('src/a.ts'))
 check('takes a base name', baseName('D:/deepseek/项目A/(x) [y].md') === '(x) [y].md')
+
+// A path spelling from the other platform must survive on every host. These
+// assertions are platform-independent on purpose: `normalizeAbsolute` is pure
+// string work, and the `canonical` pair below holds on Windows (where the
+// platform resolver handles a drive path itself) and on POSIX (where the
+// lexical normalizer must, because `resolve` would read `D:/x` as relative).
+group('foreign path spellings')
+check('keeps a drive path as written', normalizeAbsolute('D:/deepseek/a') === 'D:/deepseek/a')
+check('keeps a bare drive root', normalizeAbsolute('D:/') === 'D:/')
+check('never climbs past a drive root', normalizeAbsolute('D:/a/../../Windows') === 'D:/Windows')
+check('never climbs past the POSIX root', normalizeAbsolute('/a/../../b') === '/b')
+check('collapses repeated separators and dot segments', normalizeAbsolute('/a//b/./c') === '/a/b/c')
+check('preserves a UNC share and clamps .. at the share', normalizeAbsolute('//srv/share/a/../b') === '//srv/share/b')
+check('keeps a bare UNC share prefix', normalizeAbsolute('//srv/share') === '//srv/share/')
+check('a bare UNC share canonicalizes without a trailing separator', canonical('//srv/share') === '//srv/share', canonical('//srv/share'))
+check('a Windows spelling folds on every host', fold('D:/Work') === 'd:/work')
+check('a POSIX spelling folds only on a Windows host', process.platform === 'win32' ? fold('/Work') === '/work' : fold('/Work') === '/Work')
+check('a foreign absolute never gains the cwd as a prefix', canonical('D:/deepseek/a') === 'D:/deepseek/a', canonical('D:/deepseek/a'))
+check('a UNC absolute keeps its share spelling', canonical('//srv/share/a') === '//srv/share/a', canonical('//srv/share/a'))
+check('a drive base resolves a relative child in its own namespace', canonical('a/b', 'D:/deepseek') === 'D:/deepseek/a/b', canonical('a/b', 'D:/deepseek'))
 
 group('hidden-entry filter')
 check('hides dot-prefixed entries by default', isHiddenEntry('.git', false) && isHiddenEntry('.dsh', false) && isHiddenEntry('.env', false))
