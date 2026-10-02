@@ -1,0 +1,27 @@
+# Dependencies (this plugin ships with zero runtime dependencies; the
+# directory only appears if you run a package manager inside the checkout).
+node_modules/
+
+# Plugin data never belongs in the repository. The real files live under
+# $DSH_HOME/storages/workspace-explorer/ on the machine running DSH.
+config.json
+native-bridge.json
+*.bak
+*.tmp
+
+# Editor and OS noise
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+npm-debug.log*
+
+# Spent one-shot development script: it rewrites lib/client.js by exact string
+# replacement against markers that later revisions already replaced. Running it
+# today fails or corrupts the client, so it is deliberately not published.
+tools/finish-client.mjs

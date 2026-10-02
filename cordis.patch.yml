@@ -1,0 +1,14 @@
+# Bundle patch for dsh-workspace-explorer.
+#
+# Inserted as a profile bundle layer (the `dsh.bundle.patch` manifest field).
+# It adds exactly one Loader row: the plugin's host half. The host half mounts
+# the plugin's own `/api/workspace-explorer` route family; the browser half
+# ships through package.json's `dsh.client` declaration.
+#
+# Disabling this entry, or removing the bundle, restores the shipped sidebar
+# workspace region immediately: the plugin only *shadows* the
+# `sidebar.workspaces` slot at a lower priority, and the shipped occupant
+# (ui-workspace) is never disabled.
+- insert:
+    - id: workspace-explorer
+      name: 'dsh-workspace-explorer'

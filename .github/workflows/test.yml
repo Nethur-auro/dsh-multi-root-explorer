@@ -1,0 +1,26 @@
+name: tests
+
+# The suite is dependency-free: it uses only Node built-ins and the `node:test`
+# runner, so it needs no install step and no lockfile.
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: node ${{ matrix.node }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        node: [20, 22]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - name: Run every test suite
+        run: node test/run.mjs

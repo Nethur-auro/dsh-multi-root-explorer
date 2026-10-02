@@ -1,0 +1,62 @@
+{
+  "name": "dsh-workspace-explorer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Workspace Explorer for DeepSeek Harness: replaces the native sidebar workspace region with a multi-root browser — a conversation tree grouped by each session's real working directory, plus a read-only resource tree that previews files in the native right Sidebar.",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "engines": {
+      "dsh": ">=0.2.0-rc.1"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "inject": [
+        "@deepseek-ai/dsh-client-ui-renderer",
+        "@deepseek-ai/dsh-client-ui-sidebar"
+      ],
+      "platform": "web"
+    }
+  },
+  "files": [
+    "lib",
+    "docs",
+    "cordis.patch.yml",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "test": "node test/run.mjs"
+  },
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "dsh-plugin",
+    "workspace",
+    "explorer",
+    "sidebar",
+    "file-tree"
+  ],
+  "author": "Nethur-auro",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Nethur-auro/dsh-workspace-explorer.git"
+  },
+  "homepage": "https://github.com/Nethur-auro/dsh-workspace-explorer#readme",
+  "bugs": {
+    "url": "https://github.com/Nethur-auro/dsh-workspace-explorer/issues"
+  },
+  "license": "MIT"
+}

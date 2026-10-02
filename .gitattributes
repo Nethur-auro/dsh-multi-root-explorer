@@ -1,0 +1,10 @@
+# Normalize line endings so the Windows and Linux CI jobs see the same bytes.
+* text=auto eol=lf
+
+# Keep binary assets untouched if screenshots are added later.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
