@@ -6,7 +6,7 @@ The npm package is `dsh-workspace-explorer`; this repository was renamed from it
 
 [中文说明](README.zh.md) | English
 
-![The plugin in the sidebar: a registered workspace expanded into conversation folders with counts, the Conversations/Resources tabs, and the eye, refresh and settings controls](assets/sidebar.jpg)
+![The plugin in the sidebar: a registered workspace expanded into conversation folders with counts, the Conversations/Resources tabs, and the eye, refresh and settings controls](assets/sidebar.png)
 
 > **Status: preview.** The automated suite passes, but live-runtime acceptance on every DSH build has not been done. See [Known limitations](#known-limitations) before you install.
 
