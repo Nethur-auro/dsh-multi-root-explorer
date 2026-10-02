@@ -9,6 +9,12 @@ native-bridge.json
 *.bak
 *.tmp
 
+# A project-level .npmrc can carry a registry token, so it must never be
+# committed. Publishing uses the user-level file (~/.npmrc) instead, which is
+# outside this repository.
+.npmrc
+.npmrc.*
+
 # Editor and OS noise
 .idea/
 .vscode/
