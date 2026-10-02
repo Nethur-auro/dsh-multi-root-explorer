@@ -32,6 +32,8 @@
   "files": [
     "lib",
     "docs",
+    "assets",
+    "screenshots.json",
     "cordis.patch.yml",
     "README.md",
     "README.zh.md",
@@ -52,11 +54,11 @@
   "author": "Nethur-auro",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Nethur-auro/dsh-workspace-explorer.git"
+    "url": "git+https://github.com/Nethur-auro/dsh-multi-root-explorer.git"
   },
-  "homepage": "https://github.com/Nethur-auro/dsh-workspace-explorer#readme",
+  "homepage": "https://github.com/Nethur-auro/dsh-multi-root-explorer#readme",
   "bugs": {
-    "url": "https://github.com/Nethur-auro/dsh-workspace-explorer/issues"
+    "url": "https://github.com/Nethur-auro/dsh-multi-root-explorer/issues"
   },
   "license": "MIT"
 }

@@ -1,8 +1,12 @@
-# dsh-workspace-explorer（工作区资源管理器）
+# dsh-multi-root-explorer（工作区资源管理器）
 
 给 [DeepSeek Harness](https://github.com/anywhere-labs/dsh-desktop) 用的工作区浏览器：它接管左侧栏的工作区区域，换成两个选项卡——**对话**按每个会话真实的工作目录归入目录树，**资源**是一个只读的文件树，点文件用 DSH 原生右侧栏预览。
 
+npm 包名是 `dsh-workspace-explorer`；本仓库由它改名而来，因此已有安装不受影响。
+
 中文 | [English](README.md)
+
+![插件在侧边栏里的样子：已登记的工作区展开为带会话数量的文件夹，上方是「对话 / 资源」选项卡，以及小眼睛、刷新和设置按钮](assets/sidebar.jpg)
 
 > **状态：预览版。** 自动化测试全部通过，但尚未在所有 DSH 版本上做完整实机验收。安装前请先看[已知限制](#已知限制)。
 
@@ -42,7 +46,7 @@ dsh plugin --profile <你的 profile 名> add dsh-workspace-explorer
 想直接从本仓库装：
 
 ```sh
-dsh plugin --profile <你的 profile 名> add git+https://github.com/Nethur-auro/dsh-workspace-explorer.git
+dsh plugin --profile <你的 profile 名> add git+https://github.com/Nethur-auro/dsh-multi-root-explorer.git
 ```
 
 把 `<你的 profile 名>` 换成你自己的（常见的是 `web` 和 `desktop`），然后重启 `dsh web`。
@@ -54,7 +58,7 @@ dsh plugin --profile <你的 profile 名> add git+https://github.com/Nethur-auro
 ```json
 {
   "dependencies": {
-    "dsh-workspace-explorer": "git+https://github.com/Nethur-auro/dsh-workspace-explorer.git"
+    "dsh-workspace-explorer": "git+https://github.com/Nethur-auro/dsh-multi-root-explorer.git"
   },
   "dsh": {
     "profile": {

@@ -1,8 +1,12 @@
-# dsh-workspace-explorer
+# dsh-multi-root-explorer
 
 A Workspace Explorer for [DeepSeek Harness](https://github.com/anywhere-labs/dsh-desktop): it replaces the sidebar's workspace region with a two-tab browser — **Conversations** grouped by each session's real working directory, and a read-only **Resources** tree that previews files in the native right sidebar.
 
+The npm package is `dsh-workspace-explorer`; this repository was renamed from it, so existing installs keep working.
+
 [中文说明](README.zh.md) | English
+
+![The plugin in the sidebar: a registered workspace expanded into conversation folders with counts, the Conversations/Resources tabs, and the eye, refresh and settings controls](assets/sidebar.jpg)
 
 > **Status: preview.** The automated suite passes, but live-runtime acceptance on every DSH build has not been done. See [Known limitations](#known-limitations) before you install.
 
@@ -42,7 +46,7 @@ dsh plugin --profile <your-profile> add dsh-workspace-explorer
 From this repository instead of npm:
 
 ```sh
-dsh plugin --profile <your-profile> add git+https://github.com/Nethur-auro/dsh-workspace-explorer.git
+dsh plugin --profile <your-profile> add git+https://github.com/Nethur-auro/dsh-multi-root-explorer.git
 ```
 
 Replace `<your-profile>` with your profile name (`web` and `desktop` are common). Then restart `dsh web`.
@@ -56,7 +60,7 @@ dependency and the bundle entry:
 ```json
 {
   "dependencies": {
-    "dsh-workspace-explorer": "git+https://github.com/Nethur-auro/dsh-workspace-explorer.git"
+    "dsh-workspace-explorer": "git+https://github.com/Nethur-auro/dsh-multi-root-explorer.git"
   },
   "dsh": {
     "profile": {
