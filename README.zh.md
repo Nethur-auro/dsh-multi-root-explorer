@@ -2,8 +2,6 @@
 
 给 [DeepSeek Harness](https://github.com/anywhere-labs/dsh-desktop) 用的工作区浏览器：它接管左侧栏的工作区区域，换成两个选项卡——**对话**按每个会话真实的工作目录归入目录树，**资源**是一个只读的文件树，点文件用 DSH 原生右侧栏预览。
 
-npm 包名是 `dsh-workspace-explorer`；本仓库由它改名而来，因此已有安装不受影响。
-
 中文 | [English](README.md)
 
 ![插件在侧边栏里的样子：已登记的工作区展开为带会话数量的文件夹，上方是「对话 / 资源」选项卡，以及小眼睛、刷新和设置按钮](assets/sidebar.png)
@@ -35,12 +33,12 @@ npm 包名是 `dsh-workspace-explorer`；本仓库由它改名而来，因此已
 
 ### 1. 插件市场（最省事）
 
-如果它已在社区目录中上架：打开**设置 → 插件市场**，搜索 `dsh-workspace-explorer`，一键安装。市场会替你改好 profile 并提示何时重启。
+如果它已在社区目录中上架：打开**设置 → 插件市场**，搜索 `dsh-multi-root-explorer`，一键安装。市场会替你改好 profile 并提示何时重启。
 
 ### 2. 命令行
 
 ```sh
-dsh plugin --profile <你的 profile 名> add dsh-workspace-explorer
+dsh plugin --profile <你的 profile 名> add dsh-multi-root-explorer
 ```
 
 想直接从本仓库装：
@@ -58,11 +56,11 @@ dsh plugin --profile <你的 profile 名> add git+https://github.com/Nethur-auro
 ```json
 {
   "dependencies": {
-    "dsh-workspace-explorer": "git+https://github.com/Nethur-auro/dsh-multi-root-explorer.git"
+    "dsh-multi-root-explorer": "git+https://github.com/Nethur-auro/dsh-multi-root-explorer.git"
   },
   "dsh": {
     "profile": {
-      "bundles": ["dsh-workspace-explorer"]
+      "bundles": ["dsh-multi-root-explorer"]
     }
   }
 }

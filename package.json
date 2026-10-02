@@ -1,5 +1,5 @@
 {
-  "name": "dsh-workspace-explorer",
+  "name": "dsh-multi-root-explorer",
   "version": "0.1.0",
   "private": true,
   "description": "Workspace Explorer for DeepSeek Harness: replaces the native sidebar workspace region with a multi-root browser — a conversation tree grouped by each session's real working directory, plus a read-only resource tree that previews files in the native right Sidebar.",

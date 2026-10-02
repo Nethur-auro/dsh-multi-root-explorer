@@ -1,4 +1,4 @@
-# Bundle patch for dsh-workspace-explorer.
+# Bundle patch for dsh-multi-root-explorer.
 #
 # Inserted as a profile bundle layer (the `dsh.bundle.patch` manifest field).
 # It adds exactly one Loader row: the plugin's host half. The host half mounts
@@ -11,4 +11,4 @@
 # (ui-workspace) is never disabled.
 - insert:
     - id: workspace-explorer
-      name: 'dsh-workspace-explorer'
+      name: 'dsh-multi-root-explorer'
