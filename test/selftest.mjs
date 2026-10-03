@@ -14,7 +14,7 @@ import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { canonical, containsPath, fold, isAbsolutePath, isHiddenEntry, normalizeAbsolute, relativeSegments, baseName, joinCanonical } from '../lib/host/paths.js'
-import { ConfigStore, describeConfig, pluginDataDir, resolveDshHome, MAX_EXPANDED } from '../lib/host/store.js'
+import { ConfigStore, describeConfig, pluginDataDir, resolveDshHome, MAX_EXPANDED, MAX_ROOTS } from '../lib/host/store.js'
 import { listDirectory, ExplorerError } from '../lib/host/listing.js'
 import { deleteSessionData } from '../lib/host/sessions.js'
 import { makeRoutes, isAllowedRequest, ROUTES } from '../lib/host/routes.js'
@@ -79,6 +79,7 @@ check('a bare UNC share canonicalizes without a trailing separator', canonical('
 check('a Windows spelling folds on every host', fold('D:/Work') === 'd:/work')
 check('a POSIX spelling folds only on a Windows host', process.platform === 'win32' ? fold('/Work') === '/work' : fold('/Work') === '/Work')
 check('a foreign absolute never gains the cwd as a prefix', canonical('D:/deepseek/a') === 'D:/deepseek/a', canonical('D:/deepseek/a'))
+check('a POSIX spelling is preserved instead of moving onto the current drive', canonical('/home/user/proj') === '/home/user/proj', canonical('/home/user/proj'))
 check('a UNC absolute keeps its share spelling', canonical('//srv/share/a') === '//srv/share/a', canonical('//srv/share/a'))
 check('a drive base resolves a relative child in its own namespace', canonical('a/b', 'D:/deepseek') === 'D:/deepseek/a/b', canonical('a/b', 'D:/deepseek'))
 
@@ -290,6 +291,19 @@ const dwxKept = (await new ConfigStore({ dir: pluginDataDir(manyHome), logger: {
 check('the newest expansion keys survive the ceiling',
   dwxKept.length === MAX_EXPANDED && dwxKept[0] === 'k5' && dwxKept[dwxKept.length - 1] === `k${MAX_EXPANDED + 4}`, `${dwxKept.length} ${dwxKept[0]} ${dwxKept[dwxKept.length - 1]}`)
 await rm(manyHome, { recursive: true, force: true })
+
+console.log('\nthe registration ceiling holds on the persistence path')
+const ceilingHome = await mkdtemp(join(tmpdir(), 'dwx-ceiling-'))
+const ceilingDir = pluginDataDir(ceilingHome)
+await mkdir(ceilingDir, { recursive: true })
+const ceilingRoots = Array.from({ length: MAX_ROOTS + 6 }, (_, index) => ({ id: `r${index}`, label: `r${index}`, path: `D:/w${index}` }))
+await writeFile(join(ceilingDir, 'config.json'), JSON.stringify({ version: 3, revision: 1, roots: ceilingRoots, prefs: {}, expandedDirectories: [], conversationHiddenDirectories: [], resourceHiddenEntries: [] }))
+const ceiling = new ConfigStore({ dir: ceilingDir, logger: { warn() {} } })
+const ceilingLoaded = await ceiling.current()
+check('a hand-edited file cannot exceed the root ceiling', ceilingLoaded.roots.length === MAX_ROOTS, String(ceilingLoaded.roots.length))
+await ceiling.update((current) => ({ ...current, roots: [...current.roots, { id: 'extra', label: 'extra', path: 'D:/extra' }] }))
+check('an update cannot exceed it either', (await ceiling.current()).roots.length === MAX_ROOTS)
+await rm(ceilingHome, { recursive: true, force: true })
 
 /** Run one route against a fake HTTP exchange. */
 async function call(routePath, { method = 'GET', body, origin, remoteAddress = '127.0.0.1' } = {}) {
