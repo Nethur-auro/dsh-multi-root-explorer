@@ -265,7 +265,9 @@ check('a candidate is still matched when the row carries no absolute path',
 check('a pick the pipeline refuses is retried and then named',
   await promoteDroppedReference(fakeController(refusingSurface(readyMenu)), 'D:/A/sub/a.txt', 120) === 'pick-refused')
 check('a menu that never opens names the missing menu', await promoteDroppedReference(fakeController(refusingSurface({ open: false, groups: [] })), 'D:/A/sub/a.txt', 40) === 'no-menu')
-check('a still-loading group names the missing menu', await promoteDroppedReference(fakeController(refusingSurface({ open: true, groups: [{ source: 'workspace', status: 'loading', items: [] }] })), 'D:/A/sub/a.txt', 40) === 'no-menu')
+check('a menu that opens without our group names the missing source',
+  await promoteDroppedReference(fakeController(refusingSurface({ open: true, groups: [{ source: 'reference', status: 'ready', items: [{ path: 'D:/A/sub/a.txt' }] }] })), 'D:/A/sub/a.txt', 40) === 'no-source')
+check('a still-loading group names the missing source', await promoteDroppedReference(fakeController(refusingSurface({ open: true, groups: [{ source: 'workspace', status: 'loading', items: [] }] })), 'D:/A/sub/a.txt', 40) === 'no-source')
 check('a ready group without our path names the missing candidate',
   await promoteDroppedReference(fakeController(refusingSurface({ open: true, groups: [{ source: 'workspace', status: 'ready', items: [{ path: 'D:/A/other' }] }] })), 'D:/A/sub/a.txt', 40) === 'no-candidate')
 check('an unrelated trigger names the missing menu',
