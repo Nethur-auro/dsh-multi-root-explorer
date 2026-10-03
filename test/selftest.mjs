@@ -13,8 +13,8 @@ import { mkdtemp, mkdir, rm, symlink, writeFile, readFile, readdir } from 'node:
 import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { canonical, containsPath, fold, isAbsolutePath, isHiddenEntry, normalizeAbsolute, relativeSegments, baseName } from '../lib/host/paths.js'
-import { ConfigStore, describeConfig, pluginDataDir, resolveDshHome } from '../lib/host/store.js'
+import { canonical, containsPath, fold, isAbsolutePath, isHiddenEntry, normalizeAbsolute, relativeSegments, baseName, joinCanonical } from '../lib/host/paths.js'
+import { ConfigStore, describeConfig, pluginDataDir, resolveDshHome, MAX_EXPANDED } from '../lib/host/store.js'
 import { listDirectory, ExplorerError } from '../lib/host/listing.js'
 import { deleteSessionData } from '../lib/host/sessions.js'
 import { makeRoutes, isAllowedRequest, ROUTES } from '../lib/host/routes.js'
@@ -276,6 +276,21 @@ searcher.invalidate(indexScratch)
 check('dropping the cache forgets the root', searcher.cache.size === 0)
 await rm(indexScratch, { recursive: true, force: true })
 
+console.log('\npath joining keeps the canonical spelling')
+check('a drive root joins without doubling its slash', joinCanonical('D:/', 'x') === 'D:/x' && joinCanonical('D:', 'x') === 'D:/x')
+check('a POSIX root joins without doubling its slash', joinCanonical('/', 'x') === '/x')
+check('an ordinary directory joins once', joinCanonical('D:/a', 'x') === 'D:/a/x' && joinCanonical('//share/dir', 'x') === '//share/dir/x')
+check('a joined drive-root child folds like its canonical spelling', fold(joinCanonical('D:/', 'x')) === fold('D:/x'))
+
+console.log('\nexpansion state keeps the newest keys')
+const manyHome = await mkdtemp(join(tmpdir(), 'dwx-many-'))
+const manyStore = new ConfigStore({ dir: pluginDataDir(manyHome), logger: { warn() {} } })
+await manyStore.update((current) => ({ ...current, expandedDirectories: Array.from({ length: MAX_EXPANDED + 5 }, (_, index) => `k${index}`) }))
+const dwxKept = (await new ConfigStore({ dir: pluginDataDir(manyHome), logger: { warn() {} } }).current()).expandedDirectories
+check('the newest expansion keys survive the ceiling',
+  dwxKept.length === MAX_EXPANDED && dwxKept[0] === 'k5' && dwxKept[dwxKept.length - 1] === `k${MAX_EXPANDED + 4}`, `${dwxKept.length} ${dwxKept[0]} ${dwxKept[dwxKept.length - 1]}`)
+await rm(manyHome, { recursive: true, force: true })
+
 /** Run one route against a fake HTTP exchange. */
 async function call(routePath, { method = 'GET', body, origin, remoteAddress = '127.0.0.1' } = {}) {
   const routeName = routePath.split('?')[0]
@@ -359,12 +374,19 @@ check('fence rejects a forwarded-for spoof', !isAllowedRequest({ socket: { remot
 const resetCall = await call(ROUTES.reset, { method: 'POST', body: {} })
 check('reset clears the host configuration', resetCall.payload.ok === true && resetCall.payload.value.roots.length === 0)
 
-const hideCall = await call(ROUTES.hidden, { method: 'POST', body: { path: 'D:\\somewhere', hidden: true } })
-check('removes a directory from the tree', hideCall.payload.ok === true && JSON.stringify(hideCall.payload.value.hiddenDirectories) === '["D:/somewhere"]')
-const hideAgain = await call(ROUTES.hidden, { method: 'POST', body: { path: 'd:/somewhere/', hidden: true } })
+await mkdir(join(scratch, 'hide-target', 'child'), { recursive: true })
+const hideRootCall = await call(ROUTES.addRoot, { method: 'POST', body: { path: join(scratch, 'hide-target') } })
+check('registers a root to hide a directory inside', hideRootCall.payload.ok === true)
+const hideRootId = hideRootCall.payload.value.roots.find((entry) => entry.path.endsWith('hide-target'))?.id
+const hideTarget = join(scratch, 'hide-target', 'child')
+const hideCall = await call(ROUTES.hidden, { method: 'POST', body: { path: hideTarget, hidden: true } })
+check('removes a directory from the tree', hideCall.payload.ok === true && hideCall.payload.value.hiddenDirectories.length === 1, JSON.stringify(hideCall.payload))
+const hideAgain = await call(ROUTES.hidden, { method: 'POST', body: { path: `${hideTarget.replace(/\\/g, '/')}/`, hidden: true } })
 check('re-hiding is idempotent', hideAgain.payload.value.hiddenDirectories.length === 1)
-const showAgain = await call(ROUTES.hidden, { method: 'POST', body: { path: 'D:\\somewhere', hidden: false } })
+const showAgain = await call(ROUTES.hidden, { method: 'POST', body: { path: hideTarget, hidden: false } })
 check('restores it', showAgain.payload.ok === true && showAgain.payload.value.hiddenDirectories.length === 0)
+const dropHideRoot = await call(ROUTES.removeRoot, { method: 'POST', body: { id: hideRootId } })
+check('drops the temporary root again', dropHideRoot.payload.ok === true && dropHideRoot.payload.value.roots.length === 0)
 check('rejects a relative path', (await call(ROUTES.hidden, { method: 'POST', body: { path: 'somewhere' } })).payload.error.code === 'bad-request')
 check('rejects a missing path', (await call(ROUTES.hidden, { method: 'POST', body: {} })).payload.error.code === 'bad-request')
 
@@ -507,6 +529,14 @@ check('a running session survives the refusal', existsSync(keptSession))
 
 await rm(scratch, { recursive: true, force: true })
 await rm(home, { recursive: true, force: true })
+
+console.log('\nhidden entries are validated whatever the scope')
+const escapedHide = await call(ROUTES.hidden, { method: 'POST', body: { path: 'C:/Outside', hidden: true } })
+check('an un-scoped hide still enforces the root boundary', escapedHide.payload.ok === false && escapedHide.payload.error.code === 'outside-root', JSON.stringify(escapedHide.payload.error))
+const scopedHide = await call(ROUTES.hidden, { method: 'POST', body: { path: 'C:/Outside', hidden: true, scope: 'conversations' } })
+check('a scoped hide enforces it too', scopedHide.payload.ok === false && scopedHide.payload.error.code === 'outside-root')
+const outOfRootRestore = await call(ROUTES.hidden, { method: 'POST', body: { path: 'C:/Outside', hidden: false } })
+check('restoring a path outside every root is still accepted', outOfRootRestore.payload.ok === true)
 
 console.log(`\n${failed === 0 ? 'PASS' : 'FAIL'} — ${passed} passed, ${failed} failed`)
 process.exitCode = failed === 0 ? 0 : 1
