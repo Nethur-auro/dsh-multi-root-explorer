@@ -168,6 +168,24 @@ const busyStub = Object.assign(Object.create(ExplorerController.prototype), {
 check('only goal-active sessions join the extra-busy set',
   [...busyStub.busySessionIds({ ids: ['working', 'resting'] })].join() === 'working')
 
+console.log('\nsubagents working under a parent')
+const subagentStub = (entries, statuses, parentId = 'parent-1') => Object.assign(Object.create(ExplorerController.prototype), {
+  service: key => key === 'sessions'
+    ? { list: { getSnapshot: () => ({ projectionsBySession: entries === undefined ? {} : { [parentId]: { values: { subagentCatalog: entries } } } }) } }
+    : key === 'uiSession' ? { sessionStatus: { getSnapshot: () => new Map(statuses) } } : undefined,
+})
+check('a running catalogued subagent keeps its parent busy',
+  subagentStub([{ id: 'child-1' }], [['child-1', { running: true }]]).subagentWorking('parent-1') === true)
+check('a subagent that stopped does not', subagentStub([{ id: 'child-1' }], [['child-1', { running: false }]]).subagentWorking('parent-1') === false)
+check('another session running is not this parent busy',
+  subagentStub([{ id: 'child-1' }], [['child-2', { running: true }]]).subagentWorking('parent-1') === false)
+check('a parent with no catalog is not busy',
+  subagentStub(undefined, []).subagentWorking('parent-1') === false && subagentStub([], []).subagentWorking('parent-1') === false)
+check('a missing status service never invents activity',
+  Object.assign(Object.create(ExplorerController.prototype), { service: key => key === 'sessions' ? { list: { getSnapshot: () => ({ projectionsBySession: { p: { values: { subagentCatalog: [{ id: 'c' }] } } } }) } } : undefined }).subagentWorking('p') === false)
+check('the extra-busy set includes a session whose subagent works',
+  [...subagentStub([{ id: 'child-1' }], [['child-1', { running: true }]]).busySessionIds({ ids: ['parent-1', 'other'] })].join() === 'parent-1')
+
 console.log('\n@ reference source')
 const searched = []
 globalThis.fetch = async (url) => {
