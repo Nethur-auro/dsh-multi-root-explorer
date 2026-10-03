@@ -129,7 +129,7 @@ check('dragstart writes three payloads and copy only', Object.keys(transfer.data
 check('a reference omits the base directory', referenceFor('D:/A/sub/a.txt', 'file', 'D:/A') === '@sub/a.txt')
 check('a directory reference keeps its trailing slash', referenceFor('D:/A/sub', 'directory', 'D:/A') === '@sub/')
 check('a reference quotes whitespace', referenceFor('D:/A/my file.txt', 'file', 'D:/A') === '@"my file.txt"')
-check('a quoted directory leaves the quote open for drilling, like the official grammar', referenceFor('D:/A/my dir', 'directory', 'D:/A') === '@"my dir/')
+check('a quoted directory closes its quote, so the token stays detectable', referenceFor('D:/A/my dir', 'directory', 'D:/A') === '@"my dir/"')
 check('an apostrophe needs no quote', referenceFor("D:/A/it's.txt", 'file', 'D:/A') === "@it's.txt")
 check('a double quote has no mention form and falls back to the plain path', referenceFor('D:/A/say "hi".txt', 'file', 'D:/A') === 'D:/A/say "hi".txt')
 check('a path outside the base stays absolute', referenceFor('D:/B/x.txt', 'file', 'D:/A') === '@D:/B/x.txt')

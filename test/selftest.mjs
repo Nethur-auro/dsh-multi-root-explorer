@@ -257,6 +257,14 @@ check('the limit is honoured', ranked('', 2).length === 2)
 check('an unmatched query returns nothing', ranked('zzzz').length === 0)
 check('an absolute query matches the absolute path, not the relative one', ranked('D:/w/b/deep/x.md').join() === 'b/deep/x.md')
 check('an absolute directory query matches that directory', ranked('D:/w/b/').join() === 'b/Notes.md,b/deep/x.md')
+check('a query spelled against the working directory matches its entry',
+  searchIndex(searchCorpus, 'deep/x.md', 10, { cwd: 'D:/w/b' }).map((entry) => entry.relative).join() === 'b/deep/x.md')
+check('the same spelling matched nothing while only the root was known',
+  searchIndex(searchCorpus, 'deep/x.md', 10).length === 0)
+check('an unrelated query still matches nothing with a working directory',
+  searchIndex(searchCorpus, 'zzzz', 10, { cwd: 'D:/w/b' }).length === 0)
+check('a directory query spelled from the working directory matches its folder',
+  searchIndex(searchCorpus, 'deep/', 10, { cwd: 'D:/w/b' }).map((entry) => entry.relative).join() === 'b/deep/x.md')
 
 console.log('\n@ completion index over a real tree')
 const indexScratch = await mkdtemp(join(tmpdir(), 'dwx-index-'))
