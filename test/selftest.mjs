@@ -18,6 +18,7 @@ import { ConfigStore, describeConfig, pluginDataDir, resolveDshHome } from '../l
 import { listDirectory, ExplorerError } from '../lib/host/listing.js'
 import { deleteSessionData } from '../lib/host/sessions.js'
 import { makeRoutes, isAllowedRequest, ROUTES } from '../lib/host/routes.js'
+import { searchIndex, EXCLUDED_DIRECTORIES, WorkspaceSearch } from '../lib/host/search.js'
 
 let passed = 0
 let failed = 0
@@ -236,7 +237,44 @@ const routes = makeRoutes({ store: routeStore, sessionsRoot: join(scratch, 'sess
   sync: async (body) => { bridgeCalls.push(body); return { ready: true } },
   createSession: async (body) => { bridgeCalls.push(body); return { ok: false, status: 'partial', sessionId: 'retained-id' } },
 } })
-check('exposes every documented route', routes.length === 12 && Object.values(ROUTES).every((path) => routes.some((route) => route.path === path)), String(routes.length))
+check('exposes every documented route', routes.length === Object.values(ROUTES).length && Object.values(ROUTES).every((path) => routes.some((route) => route.path === path)), String(routes.length))
+
+console.log('\n@ completion search ranking')
+const searchCorpus = [
+  { path: 'D:/w/notes', relative: 'notes', name: 'notes', type: 'directory', rootId: 'r' },
+  { path: 'D:/w/a/notes.md', relative: 'a/notes.md', name: 'notes.md', type: 'file', rootId: 'r' },
+  { path: 'D:/w/b/Notes.md', relative: 'b/Notes.md', name: 'Notes.md', type: 'file', rootId: 'r' },
+  { path: 'D:/w/b/deep/x.md', relative: 'b/deep/x.md', name: 'x.md', type: 'file', rootId: 'r' },
+]
+const ranked = (query, limit) => searchIndex(searchCorpus, query, limit ?? 10).map((entry) => entry.relative)
+check('the exclusion list matches the shipped provider', EXCLUDED_DIRECTORIES.includes('node_modules') && EXCLUDED_DIRECTORIES.includes('.git'))
+check('an exact basename outranks a prefix and a buried substring', ranked('notes').join() === 'notes,a/notes.md,b/Notes.md')
+check('ranking is case insensitive', ranked('NOTES').length === 3)
+check('a scoped query lists everything under that directory', ranked('b/').join() === 'b/Notes.md,b/deep/x.md')
+check('a scoped query with a tail narrows by basename', ranked('b/x').join() === 'b/deep/x.md')
+check('the limit is honoured', ranked('', 2).length === 2)
+check('an unmatched query returns nothing', ranked('zzzz').length === 0)
+check('an absolute query matches the absolute path, not the relative one', ranked('D:/w/b/deep/x.md').join() === 'b/deep/x.md')
+check('an absolute directory query matches that directory', ranked('D:/w/b/').join() === 'b/Notes.md,b/deep/x.md')
+
+console.log('\n@ completion index over a real tree')
+const indexScratch = await mkdtemp(join(tmpdir(), 'dwx-index-'))
+await mkdir(join(indexScratch, 'sub', 'node_modules'), { recursive: true })
+await writeFile(join(indexScratch, 'a.txt'), 'a')
+await writeFile(join(indexScratch, 'sub', 'b.md'), 'b')
+await writeFile(join(indexScratch, 'sub', 'node_modules', 'c.js'), 'c')
+const searcher = new WorkspaceSearch()
+check('a cold index starts empty instead of blocking on a walk', new WorkspaceSearch().indexOf(indexScratch, 'r').entries.length === 0)
+const indexed = await searcher.settle(indexScratch, 'r')
+const indexedRelatives = indexed.entries.map((entry) => entry.relative).sort()
+check('the index lists a real tree files and directories', indexedRelatives.join() === 'a.txt,sub,sub/b.md')
+check('the index never descends into an excluded directory', !indexedRelatives.some((relative) => relative.includes('node_modules')))
+check('a query finds a nested file by basename', (await searcher.search([{ id: 'r', path: indexScratch }], 'b.md', 5)).map((entry) => entry.relative).join() === 'sub/b.md')
+check('a fresh index is served without re-walking', searcher.indexOf(indexScratch, 'r') === indexed)
+check('a changed root id starts a different index', searcher.indexOf(indexScratch, 'other') !== indexed)
+searcher.invalidate(indexScratch)
+check('dropping the cache forgets the root', searcher.cache.size === 0)
+await rm(indexScratch, { recursive: true, force: true })
 
 /** Run one route against a fake HTTP exchange. */
 async function call(routePath, { method = 'GET', body, origin, remoteAddress = '127.0.0.1' } = {}) {
