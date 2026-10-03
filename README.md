@@ -13,9 +13,11 @@ A Workspace Explorer for [DeepSeek Harness](https://github.com/anywhere-labs/dsh
 - **Fixed, multi-root workspaces.** Directories you import stay put instead of being recomputed from a common ancestor as sessions come and go.
 - **Conversations as a directory tree.** Every session is filed under its real `cwd`, with direct conversations first and child folders after them, recursively. Sessions whose `cwd` is outside your roots stay reachable as their own anchor; sessions with no `cwd` get a separate group.
 - **Resources, read-only.** Directory levels load on demand and paginate, so opening a big drive never rescans the disk. Clicking a file opens it in DSH's own right sidebar, leaving the main conversation where it was.
-- **Two-state hiding, per tab.** The eye button in the panel header enters a selection mode where hidden entries are shown and pre-selected; toggle the circles, click the eye again, and exactly the selected set is hidden. Hiding is display-only and fully reversible — no file, directory, or session record is touched.
+- **Selection means one thing in both tabs.** The eye button enters a selection mode where hidden entries are shown and pre-selected. A click on an unselected folder selects it, and its whole subtree reads as selected; a click on a child that a selected ancestor covers excludes just that child, expanding the ancestor into its siblings; a click on an already selected folder clears it and its subtree; a **double click** on a selected folder leaves the folder unselected while every child stays selected, which submits as an empty folder. Children are read from the Host per directory, so a folder that was never expanded is covered too. Clicking the eye again hides exactly the selected set — display-only and fully reversible, so no file, directory, or session record is touched.
 - **Per-folder actions.** Right-click or the trailing `···` on any folder to start a new session in that directory, open it in the system file manager, or (for resources) copy its absolute path.
-- **Drag a file or folder out of the tree.** Resource rows are drag sources carrying `text/plain`, `text/uri-list`, and `application/x-dsh-workspace-path`; the effect is always `copy`.
+- **Dropping a row into the composer lands a real reference.** Resource rows are drag sources (`text/plain`, `text/uri-list`, plus a format private to this plugin) with an always-`copy` effect. A drop inside the conversation input is promoted into a native **atomic reference** — file icon, filename, business colour — which is exactly what picking a candidate from the `@` menu produces. When the promotion cannot run (the drop landed against a word, or no completion menu opened for that text) the readable reference text stays behind and says why; the draft is never left broken.
+- **`@` reaches every workspace.** DSH's own file completion indexes the session working directory only, so the plugin registers its own `@` source covering every registered root, backed by a bounded Host index that follows the shipped exclusion rules, walks in background slices, and never blocks a query.
+- **Honest working state.** The status card and the row glyph do not look at a session's own agent alone: a **subagent still working** (even after the main agent stopped) and a **goal still working through its rounds** (the gap between two of them) both read as working.
 - **Native archive support.** Archive and unarchive sessions through DSH's own service, with archive kept clearly distinct from permanent deletion.
 - **Survives uninstalling.** Directories that hold ordinary sessions are also registered as native DSH workspaces while the plugin runs, so disabling or removing it does not hide your conversations.
 
@@ -120,8 +122,8 @@ invokes that code path.
 ## Known limitations
 
 - **Automated tests are contract tests, not live acceptance.** They use mocks and never touch your real sessions. Named-but-unsent sessions across a fresh Host process, native visibility right after uninstall, and popover placement at unusual zoom levels still need checking on your build. Do not force-close a running profile to test persistence.
-- **Drag payloads are offered, not guaranteed to be consumed.** The tree provides standard `DataTransfer` formats; whether a given DSH build turns them into a composer reference or attachment has not been verified here, and the plugin does not call any undocumented composer API to force it.
-- **Selection covers what is loaded.** The resource tree is paginated and lazy, so a parent folder's "select everything" applies to the descendants already loaded in the client. Expand or load more before relying on it for a very large tree.
+- **Promoting a drop into a reference uses an undocumented interface.** The editor inserts `text/plain` as plain text, and a reference chip can only be minted by the input pipeline when a completion candidate is picked, so the plugin asks that pipeline for the pick its own gesture would have made, after the text has landed. Every step is feature-detected, and a step that no longer matches leaves the readable reference text in place — the drag's original behaviour. **A DSH upgrade that renames those internals silently disables the promotion**; `lib/client.js` marks the exact fields it depends on with an `ADAPTATION POINT` comment so adapting is quick.
+- **Selecting a folder costs one Host read.** The resource tree is paginated and lazy, while selecting a parent has to cover all of its children, so a click reads that directory's own level from the Host on demand (paging to the end) rather than trusting what happens to be expanded. A very large directory makes that one click slower.
 - **Menus need the Popover API.** On a browser without it, the plugin degrades to an explicit error notice instead of showing a misplaced menu.
 - **Source changes are not a running Host.** Editing files in this repository does not update a live DSH process; host routes require a restart.
 
@@ -135,9 +137,12 @@ node test/run.mjs
 ```
 
 The runner discovers every `*.test.mjs` plus `selftest.mjs` and executes them
-with the same Node executable. Coverage is directory listing and pagination,
-configuration and migration, the route family and its trust fence, the
-conversation tree model, visibility scoping, drag payload encoding, and the
+with the same Node executable (currently 158 + 138 + 15). Coverage is directory
+listing and pagination, configuration, migration and every ceiling, the route
+family and its trust fence, path namespaces and cross-platform spellings, the
+conversation tree model, visibility scoping and hidden-target boundaries,
+reference text plus the `@` candidate index and its ranking, every degrading
+path of the drop promotion, working-state folding (subagents and goals), and the
 native bridge's create/rename/durability contracts.
 
 ## Design notes
