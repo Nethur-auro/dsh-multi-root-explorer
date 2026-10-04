@@ -443,6 +443,8 @@ const linkHide = await call(ROUTES.hidden, { method: 'POST', body: { path: join(
 check('a target spelled through the link counts as inside the root', linkHide.payload.ok === true, JSON.stringify(linkHide.payload))
 const linkStored = JSON.stringify(linkHide.payload.value?.hiddenDirectories ?? [])
 check('and it is stored in the same spelling as the roots', linkStored.includes('real/inner') || linkStored.includes('real\\inner'), linkStored)
+const linkShow = await call(ROUTES.hidden, { method: 'POST', body: { path: join(linkPath, 'inner'), hidden: false } })
+check('restoring it through the same spelling clears the record', linkShow.payload.ok === true && linkShow.payload.value.hiddenDirectories.length === 0, JSON.stringify(linkShow.payload))
 const linkRootId = linkRootCall.payload.value.roots.find((entry) => entry.path.endsWith('real'))?.id
 if (linkRootId) await call(ROUTES.removeRoot, { method: 'POST', body: { id: linkRootId } })
 await rm(linkScratch, { recursive: true, force: true })
