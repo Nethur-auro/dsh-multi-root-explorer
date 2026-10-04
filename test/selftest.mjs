@@ -445,6 +445,12 @@ const linkStored = JSON.stringify(linkHide.payload.value?.hiddenDirectories ?? [
 check('and it is stored in the same spelling as the roots', linkStored.includes('real/inner') || linkStored.includes('real\\inner'), linkStored)
 const linkShow = await call(ROUTES.hidden, { method: 'POST', body: { path: join(linkPath, 'inner'), hidden: false } })
 check('restoring it through the same spelling clears the record', linkShow.payload.ok === true && linkShow.payload.value.hiddenDirectories.length === 0, JSON.stringify(linkShow.payload))
+// Records written before hiding resolved its target hold the caller's spelling.
+// A restore has to match that one too, or a directory hidden by an older version
+// could never be shown again.
+await routeStore.update((current) => ({ ...current, resourceHiddenEntries: [join(linkPath, 'legacy')] }))
+const legacyShow = await call(ROUTES.hidden, { method: 'POST', body: { scope: 'resources', path: join(linkPath, 'legacy'), hidden: false } })
+check('a record seeded in the older spelling is still restorable', legacyShow.payload.ok === true && legacyShow.payload.value.resourceHiddenEntries.length === 0, JSON.stringify(legacyShow.payload))
 const linkRootId = linkRootCall.payload.value.roots.find((entry) => entry.path.endsWith('real'))?.id
 if (linkRootId) await call(ROUTES.removeRoot, { method: 'POST', body: { id: linkRootId } })
 await rm(linkScratch, { recursive: true, force: true })
