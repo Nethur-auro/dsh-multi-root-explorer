@@ -426,6 +426,26 @@ const showAgain = await call(ROUTES.hidden, { method: 'POST', body: { path: hide
 check('restores it', showAgain.payload.ok === true && showAgain.payload.value.hiddenDirectories.length === 0)
 const dropHideRoot = await call(ROUTES.removeRoot, { method: 'POST', body: { id: hideRootId } })
 check('drops the temporary root again', dropHideRoot.payload.ok === true && dropHideRoot.payload.value.roots.length === 0)
+
+// A caller may spell one location the way the OS reports it — a Windows 8.3
+// short name, or a symlinked temp directory such as `/var` against
+// `/private/var` — while a registered root is stored resolved. Compared as
+// spellings the two look like different places, which is how a path genuinely
+// inside its own root came back as `outside-root` on the Windows CI runner.
+console.log('\na hidden path spelled through a link to its own root')
+const linkScratch = await mkdtemp(join(tmpdir(), 'dwx-link-'))
+await mkdir(join(linkScratch, 'real', 'inner'), { recursive: true })
+const linkPath = join(linkScratch, 'link')
+await symlink(join(linkScratch, 'real'), linkPath, process.platform === 'win32' ? 'junction' : 'dir')
+const linkRootCall = await call(ROUTES.addRoot, { method: 'POST', body: { path: linkPath } })
+check('registers the root through the link', linkRootCall.payload.ok === true, JSON.stringify(linkRootCall.payload))
+const linkHide = await call(ROUTES.hidden, { method: 'POST', body: { path: join(linkPath, 'inner'), hidden: true } })
+check('a target spelled through the link counts as inside the root', linkHide.payload.ok === true, JSON.stringify(linkHide.payload))
+const linkStored = JSON.stringify(linkHide.payload.value?.hiddenDirectories ?? [])
+check('and it is stored in the same spelling as the roots', linkStored.includes('real/inner') || linkStored.includes('real\\inner'), linkStored)
+const linkRootId = linkRootCall.payload.value.roots.find((entry) => entry.path.endsWith('real'))?.id
+if (linkRootId) await call(ROUTES.removeRoot, { method: 'POST', body: { id: linkRootId } })
+await rm(linkScratch, { recursive: true, force: true })
 check('rejects a relative path', (await call(ROUTES.hidden, { method: 'POST', body: { path: 'somewhere' } })).payload.error.code === 'bad-request')
 check('rejects a missing path', (await call(ROUTES.hidden, { method: 'POST', body: {} })).payload.error.code === 'bad-request')
 
