@@ -4,7 +4,7 @@ A Workspace Explorer for [DeepSeek Harness](https://github.com/anywhere-labs/dsh
 
 [中文说明](README.zh.md) | English
 
-![The plugin in the sidebar: a registered workspace expanded into conversation folders with counts, the Conversations/Resources tabs, and the eye, refresh and settings controls](assets/sidebar.png)
+![The plugin in the sidebar: a registered workspace expanded into conversation folders with counts, the Conversations/Resources tabs, and the eye, refresh and settings controls — folder names and conversation titles are redacted](assets/sidebar.png)
 
 > **Status: preview.** The automated suite passes, but live-runtime acceptance on every DSH build has not been done. See [Known limitations](#known-limitations) before you install.
 
@@ -31,27 +31,41 @@ The plugin ships with **no runtime dependencies** — only the `react` that DSH'
 
 ## Install
 
-Pick whichever route matches how you manage DSH. All of them end with a **Host restart** (or app restart) and a page refresh.
+Four routes — pick whichever matches how you manage DSH. All of them end with a **DSH restart (app and Host)** and a page refresh: Host routes do not hot-reload, so a refresh alone is not enough.
 
-### 1. Plugin market (easiest)
+> 💡 **Routes 2 and 3 need a `dsh` command on your machine.** Desktop-app users who get "command not found" should use **route 1** or **route 4** — neither needs a command line.
 
-If it is listed in the community catalog, open **Settings → Plugin market**, search for `dsh-multi-root-explorer`, and install it. The market handles the profile wiring and tells you when to restart.
+### 1. In-app plugin market (easiest, no command line)
 
-### 2. Command line
+Open **Settings → Plugin market**, search for `dsh-multi-root-explorer`, and install it. The market does the profile wiring and tells you when to restart. Before it is listed in the community catalog (nothing found), use route 2 or 4.
+
+### 2. npm package (command line; always the newest published version)
 
 ```sh
 dsh plugin --profile <your-profile> add dsh-multi-root-explorer
 ```
 
-From this repository instead of npm:
+Naming the **package** rather than a git URL makes the package manager take the newest published version, so future releases are picked up automatically. Current version: see the [npm page](https://www.npmjs.com/package/dsh-multi-root-explorer).
+
+### 3. From GitHub (no npm involved)
+
+**3a. Prebuilt tarball (always the latest release)**
+
+```sh
+dsh plugin --profile <your-profile> add https://github.com/Nethur-auro/dsh-multi-root-explorer/releases/latest/download/dsh-multi-root-explorer.tgz
+```
+
+`latest` is resolved at request time and the asset name deliberately carries no version, so this always points at the newest release and never rots. (The plugin has no build step — `lib/` is committed built output and `scripts` holds only `test` — so the prebuilt tarball and a source install contain the same thing.)
+
+**3b. Source (tracks `main`)**
 
 ```sh
 dsh plugin --profile <your-profile> add git+https://github.com/Nethur-auro/dsh-multi-root-explorer.git
 ```
 
-Replace `<your-profile>` with your profile name (`web` and `desktop` are common). Then restart `dsh web`.
+This installs the current commit on `main`. Every release here leaves `main` parked on its release commit, so the `main` head and the newest tag are always the same commit — **a source install is the latest release**. The trade-off is that package managers cache by commit, so upgrading means reinstalling.
 
-### 3. By hand
+### 4. By hand (no command line)
 
 The plugin manager ultimately edits your profile's `package.json` at
 `$DSH_HOME/profiles/<your-profile>/package.json` (default `~/.dsh`). Add the
@@ -60,7 +74,7 @@ dependency and the bundle entry:
 ```json
 {
   "dependencies": {
-    "dsh-multi-root-explorer": "git+https://github.com/Nethur-auro/dsh-multi-root-explorer.git"
+    "dsh-multi-root-explorer": "^0.1.4"
   },
   "dsh": {
     "profile": {
@@ -72,7 +86,7 @@ dependency and the bundle entry:
 
 Then install the profile's dependencies with `pnpm install` inside that
 directory and restart DSH. Doing this by hand is equivalent to what the plugin
-manager does, so prefer option 1 or 2 unless you have a reason not to.
+manager does, so prefer route 1 or 2 unless you have a reason not to.
 
 ### Verify it loaded
 

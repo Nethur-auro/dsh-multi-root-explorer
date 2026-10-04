@@ -4,7 +4,7 @@
 
 中文 | [English](README.md)
 
-![插件在侧边栏里的样子：已登记的工作区展开为带会话数量的文件夹，上方是「对话 / 资源」选项卡，以及小眼睛、刷新和设置按钮](assets/sidebar.png)
+![插件在侧边栏里的样子：已登记的工作区展开为带会话数量的文件夹，上方是「对话 / 资源」选项卡，以及小眼睛、刷新和设置按钮（目录名与会话标题已打码）](assets/sidebar.png)
 
 > **状态：预览版。** 自动化测试全部通过，但尚未在所有 DSH 版本上做完整实机验收。安装前请先看[已知限制](#已知限制)。
 
@@ -31,34 +31,48 @@
 
 ## 安装
 
-任选一种，最后都需要**重启 Host（或重启应用）**并刷新页面。
+四种方式，任选一种。**装完都要重启 DSH（重启应用与 Host），然后刷新页面** —— Host 路由不支持热重载，只刷新页面不够。
 
-### 1. 插件市场（最省事）
+> 💡 **方式 2、3 需要机器上有 `dsh` 命令。** 桌面应用版用户如果提示找不到命令，请用 **方式 1** 或 **方式 4** —— 这两条完全不依赖命令行。
 
-如果它已在社区目录中上架：打开**设置 → 插件市场**，搜索 `dsh-multi-root-explorer`，一键安装。市场会替你改好 profile 并提示何时重启。
+### 1. 应用内插件市场（最省事，不依赖命令行）
 
-### 2. 命令行
+打开**设置 → 插件市场**，搜索 `dsh-multi-root-explorer`，一键安装。市场会替你改好 profile 并提示何时重启。社区目录上架前（搜不到时）请用方式 2 或 4。
+
+### 2. npm 包（命令行；永远取最新已发布版本）
 
 ```sh
 dsh plugin --profile <你的 profile 名> add dsh-multi-root-explorer
 ```
 
-想直接从本仓库装：
+写**包名**而不是 git 地址：包管理器会取 npm 上的最新已发布版本，以后发新版自动跟上。当前版本号见 [npm 页面](https://www.npmjs.com/package/dsh-multi-root-explorer)。
+
+### 3. 从 GitHub 装（不经过 npm）
+
+**方式 A：预构建包（永远取最新发布版）**
+
+```sh
+dsh plugin --profile <你的 profile 名> add https://github.com/Nethur-auro/dsh-multi-root-explorer/releases/latest/download/dsh-multi-root-explorer.tgz
+```
+
+链接里的 `latest` 在**请求时**解析，而资源文件名刻意**不带版本号**，所以它永远指向最新一次发布、也不会随发版失效。（本插件没有构建步骤：`lib/` 是随仓库提交的成品，`scripts` 里只有 `test`，所以预构建包和源码装出来的东西一致。）
+
+**方式 B：源码（跟踪 `main` 分支）**
 
 ```sh
 dsh plugin --profile <你的 profile 名> add git+https://github.com/Nethur-auro/dsh-multi-root-explorer.git
 ```
 
-把 `<你的 profile 名>` 换成你自己的（常见的是 `web` 和 `desktop`），然后重启 `dsh web`。
+装的是仓库 `main` 的当前提交。本项目**每次发布都把 `main` 停在那个发布提交上**，所以 `main` HEAD 与最新 tag 始终是同一点 —— **源码装到的就是最新发布版**。代价是包管理器按 commit 缓存，升级要重装一次。
 
-### 3. 手动改 profile
+### 4. 手动改 profile（不依赖命令行）
 
 插件管理器本质上就是改你 profile 的 `$DSH_HOME/profiles/<你的 profile 名>/package.json`（默认 `~/.dsh`）。加依赖和 bundle 条目：
 
 ```json
 {
   "dependencies": {
-    "dsh-multi-root-explorer": "git+https://github.com/Nethur-auro/dsh-multi-root-explorer.git"
+    "dsh-multi-root-explorer": "^0.1.4"
   },
   "dsh": {
     "profile": {
