@@ -125,7 +125,8 @@ const payload = workspaceDragPayload('D:/A/a.txt', 'file', 'a')
 check('drag JSON retains canonical path type and root', JSON.stringify(JSON.parse(payload['application/x-dsh-workspace-path'])) === JSON.stringify({path:'D:/A/a.txt',type:'file',rootId:'a'}))
 const transfer = { data: {}, setData(type,value) { this.data[type] = value } }
 startWorkspaceDrag({dataTransfer:transfer}, 'D:/A/a.txt', 'file', 'a')
-check('dragstart writes three payloads and copy only', Object.keys(transfer.data).length === 3 && transfer.effectAllowed === 'copy' && transfer.data['text/plain'] === 'D:/A/a.txt')
+check('dragstart writes three payloads and copy only', Object.keys(transfer.data).length === 3 && transfer.effectAllowed === 'copy' && transfer.data['text/plain'] === ' D:/A/a.txt')
+check('the dropped text leads with a separator so a token can start', transfer.data['text/plain'].startsWith(' '))
 check('a reference omits the base directory', referenceFor('D:/A/sub/a.txt', 'file', 'D:/A') === '@sub/a.txt')
 check('a directory reference keeps its trailing slash', referenceFor('D:/A/sub', 'directory', 'D:/A') === '@sub/')
 check('a reference quotes whitespace', referenceFor('D:/A/my file.txt', 'file', 'D:/A') === '@"my file.txt"')
@@ -137,7 +138,7 @@ check('a reference without a base stays absolute', referenceFor('D:/A/sub/a.txt'
 const refTransfer = { data: {}, setData(type, value) { this.data[type] = value } }
 startWorkspaceDrag({ dataTransfer: refTransfer }, 'D:/A/sub/a.txt', 'file', 'a', referenceFor('D:/A/sub/a.txt', 'file', 'D:/A'))
 check('drag carries the reference as plain text and keeps the file URI',
-  refTransfer.data['text/plain'] === '@sub/a.txt' && refTransfer.data['text/uri-list'] === 'file:///D:/A/sub/a.txt'
+  refTransfer.data['text/plain'] === ' @sub/a.txt' && refTransfer.data['text/uri-list'] === 'file:///D:/A/sub/a.txt'
   && JSON.parse(refTransfer.data['application/x-dsh-workspace-path']).path === 'D:/A/sub/a.txt')
 
 console.log('\nworking state folds in subagents')
