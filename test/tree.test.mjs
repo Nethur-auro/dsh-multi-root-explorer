@@ -14,9 +14,11 @@ const {
   buildConversationForest, countSessions, uniqueRoots, positionOverlay, levelKey,
   mergeDirectories, parentDirectory, visibilityLists, filterResourceEntries, canSelectPath, toggleSelectedPath,
   selectionCoverage, selectedVisibilityPaths, rootForPath, selectionChildren, withoutSubtree, sessionBusyIndex, goalIsActive, MAX_SELECTION, DOUBLE_CLICK_MS,
-  conversationContents, fileUriFor, referenceFor, workspaceDragPayload, startWorkspaceDrag, workspaceReferenceSource, knownMentionList, rememberMention, MAX_KNOWN_MENTIONS,
+  conversationContents, fileUriFor, referenceFor, workspaceDragPayload, startWorkspaceDrag, workspaceReferenceSource, knownMentionList, rememberMention, staleLevelKeys, MAX_KNOWN_MENTIONS,
   droppedReference, droppedInComposer, promoteDroppedReference, DRAG_MARKER,
   Row, ConversationNode, ConversationChildren, ResourceDirectory, ResourceLevel, RootBlock, SessionRow, SelectionCircle, directoryMenuItems, ExplorerController,
+  modalEditKey,
+  nextEditFocus,
 } = bundle.__internals
 let passed = 0; let failed = 0
 function check(label, value, detail) {
@@ -219,6 +221,15 @@ check('a folder chip declines the file preview', atSource.openReference({ sessio
 
 console.log('\nplain-text reference lexicon')
 check('a drag claims the mention it drops', knownMentionList().includes('sub/a.txt'))
+
+console.log('\nresource levels notice when the filesystem moves on')
+const liveLevels = { 'root:D:/a': { phase: 'ready', revision: 'aaa', path: 'D:/a', rootId: 'root' } }
+check('a level whose revision moved is reloaded', staleLevelKeys(liveLevels, { 'root:D:/a': 'bbb' }).join() === 'root:D:/a')
+check('a level whose revision matches is left alone', staleLevelKeys(liveLevels, { 'root:D:/a': 'aaa' }).length === 0)
+check('a level still loading is not disturbed', staleLevelKeys({ 'root:D:/a': { phase: 'loading', revision: 'aaa' } }, { 'root:D:/a': 'bbb' }).length === 0)
+check('a level that never carried a revision is skipped', staleLevelKeys({ 'root:D:/a': { phase: 'ready', path: 'D:/a' } }, { 'root:D:/a': 'bbb' }).length === 0)
+check('a probe that reached no level reports nothing', staleLevelKeys(liveLevels, {}).length === 0)
+check('a level the probe never reached is left alone', staleLevelKeys({ 'root:D:/a': { phase: 'ready', revision: 'aaa' }, 'root:D:/b': { phase: 'ready', revision: 'aaa' } }, { 'root:D:/a': 'bbb' }).join() === 'root:D:/a')
 check('an offered candidate claims its mention', knownMentionList().includes('D:/A/sub/b/'))
 check('the lexicon is an array the pipeline can scan', Array.isArray(knownMentionList()) && typeof knownMentionList().includes === 'function')
 const lexiconNotices = []
@@ -413,6 +424,36 @@ check('a selection past the host cap is refused before any request',
 
 globalThis.fetch = previousFetch
 controller.dispose()
+
+console.log('\nrename modal input focus key')
+check('an editing modal keys on its kind and id', modalEditKey({ kind: 'rename-session', sessionId: 's1', value: 'old' }) === 'rename-session:s1')
+check('renaming a root keys on the root id', modalEditKey({ kind: 'rename-root', rootId: 'r1', value: 'old' }) === 'rename-root:r1')
+check('the key ignores the edited value, so typing never re-focuses or re-selects',
+  modalEditKey({ kind: 'rename-session', sessionId: 's1', value: 'a' }) === modalEditKey({ kind: 'rename-session', sessionId: 's1', value: 'ab' }))
+check('reopening the same kind on another session gets a fresh key',
+  modalEditKey({ kind: 'rename-session', sessionId: 's1', value: 'x' }) !== modalEditKey({ kind: 'rename-session', sessionId: 's2', value: 'x' }))
+check('a confirmation modal has no editable field', modalEditKey({ kind: 'delete-session', sessionId: 's1' }) === null)
+check('no modal has no editable field', modalEditKey(null) === null)
+
+console.log('\nrename field focus runs once per opening, never per keystroke')
+const opening = nextEditFocus(null, modalEditKey({ kind: 'rename-session', sessionId: 's1', value: 'title' }))
+check('opening the field focuses and selects', opening.focus === true && opening.key === 'rename-session:s1')
+// The bug: every keystroke re-patched the modal, the effect re-ran, and the
+// select() call swallowed the text typed so far. Typing must never re-focus.
+const typed1 = nextEditFocus(opening.key, modalEditKey({ kind: 'rename-session', sessionId: 's1', value: 'n' }))
+const typed2 = nextEditFocus(typed1.key, modalEditKey({ kind: 'rename-session', sessionId: 's1', value: 'ne' }))
+const typed3 = nextEditFocus(typed2.key, modalEditKey({ kind: 'rename-session', sessionId: 's1', value: 'new' }))
+check('the first keystroke does not re-select', typed1.focus === false && typed1.key === 'rename-session:s1')
+check('later keystrokes do not re-select either', typed2.focus === false && typed3.focus === false)
+const closed = nextEditFocus(typed3.key, modalEditKey(null))
+check('closing the modal clears the remembered field', closed.focus === false && closed.key === null)
+const reopened = nextEditFocus(closed.key, modalEditKey({ kind: 'rename-session', sessionId: 's1', value: 'title' }))
+check('reopening the same conversation selects again', reopened.focus === true)
+const switched = nextEditFocus(reopened.key, modalEditKey({ kind: 'rename-session', sessionId: 's2', value: 'other' }))
+check('switching to another conversation selects the new field', switched.focus === true && switched.key === 'rename-session:s2')
+const rootField = nextEditFocus(null, modalEditKey({ kind: 'rename-root', rootId: 'r1', value: 'A' }))
+check('a root rename field focuses on its own key', rootField.focus === true && rootField.key === 'rename-root:r1')
+check('a root rename does not re-select while typing', nextEditFocus(rootField.key, modalEditKey({ kind: 'rename-root', rootId: 'r1', value: 'AB' })).focus === false)
 
 console.log(`\n${failed === 0 ? 'PASS' : 'FAIL'} — ${passed} passed, ${failed} failed`)
 process.exitCode = failed === 0 ? 0 : 1

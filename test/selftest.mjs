@@ -559,6 +559,8 @@ check('native status forwards', (await call(ROUTES.nativeStatus)).payload.value.
 await call(ROUTES.nativeSync, { method: 'POST', body: { repair: true } })
 const created = await call(ROUTES.createSession, { method: 'POST', body: { path: root, operationId: 'operation-test', title: 'title' } })
 check('native adapter preserves partial session id', created.payload.ok === true && created.payload.value.sessionId === 'retained-id' && bridgeCalls[0].repair === true)
+const createdUntitled = await call(ROUTES.createSession, { method: 'POST', body: { path: root, operationId: 'operation-untitled' } })
+check('a conversation can be started without naming it', createdUntitled.payload.ok === true, JSON.stringify(createdUntitled.payload))
 const concurrentWrites = await Promise.all(Array.from({ length: 12 }, (_, i) => migratedStore.update((current) => ({ ...current, directoryAliases: { ...current.directoryAliases, [`key${i}`]: `${i}` } }))))
 check('serialized mutations lose no updates', Object.keys((await migratedStore.current()).directoryAliases).length === 12)
 const failedDir = join(home, 'blocked-file'); await writeFile(failedDir, 'not a directory')

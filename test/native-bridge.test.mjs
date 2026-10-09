@@ -69,6 +69,15 @@ async function fixture(t) {
 }
 const intent = (path, operationId = 'operation_123') => ({ path, operationId, title: 'New conversation' })
 
+test('a create with no title leaves the Session for DSH to name', async (t) => {
+  const f = await fixture(t)
+  const created = await f.bridge.createSession({ path: f.child, operationId: 'operation_untitled' })
+  assert.equal(created.ok, true)
+  assert.equal(created.named, true)
+  assert.equal(created.durable, true)
+  assert.equal(f.calls.some((entry) => entry[0] === 'rename'), false)
+})
+
 test('status is read-only and includes cold ordinary headers, not subagents', async (t) => {
   const f = await fixture(t)
   f.records.push({ header: { id: 'cold', cwd: f.child } }, { header: { id: 'sub', cwd: f.outside, origin: 'subagent' } })

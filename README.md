@@ -13,8 +13,9 @@ A Workspace Explorer for [DeepSeek Harness](https://github.com/anywhere-labs/dsh
 - **Fixed, multi-root workspaces.** Directories you import stay put instead of being recomputed from a common ancestor as sessions come and go.
 - **Conversations as a directory tree.** Every session is filed under its real `cwd`, with direct conversations first and child folders after them, recursively. Sessions whose `cwd` is outside your roots stay reachable as their own anchor; sessions with no `cwd` get a separate group.
 - **Resources, read-only.** Directory levels load on demand and paginate, so opening a big drive never rescans the disk. Clicking a file opens it in DSH's own right sidebar, leaving the main conversation where it was.
+- **The resource tree keeps up with the disk.** Every loaded directory level is probed every few seconds against the Host's directory revision, and **only a level that actually changed** is re-fetched — re-fetched down to the depth already loaded, so pages you expanded by hand do not collapse. Probes are swept a slice at a time, so a wide tree stays cheap.
 - **Selection means one thing in both tabs.** The eye button enters a selection mode where hidden entries are shown and pre-selected. A click on an unselected folder selects it, and its whole subtree reads as selected; a click on a child that a selected ancestor covers excludes just that child, expanding the ancestor into its siblings; a click on an already selected folder clears it and its subtree; a **double click** on a selected folder leaves the folder unselected while every child stays selected, which submits as an empty folder. Children are read from the Host per directory, so a folder that was never expanded is covered too. Clicking the eye again hides exactly the selected set — display-only and fully reversible, so no file, directory, or session record is touched.
-- **Per-folder actions.** Right-click or the trailing `···` on any folder to start a new session in that directory, open it in the system file manager, or (for resources) copy its absolute path.
+- **Per-folder actions.** Right-click or the trailing `···` on any folder to start a new session in that directory, open it in the system file manager, or (for resources) copy its absolute path. A new session is left **unnamed on purpose**: the title is DSH's own titler's job, and it names the conversation from your first message.
 - **Dropping a row into the composer lands a real reference.** Resource rows are drag sources (`text/plain`, `text/uri-list`, plus a format private to this plugin) with an always-`copy` effect. A drop inside the conversation input is promoted into a native **atomic reference** — file icon, filename, business colour — which is exactly what picking a candidate from the `@` menu produces. When the promotion cannot run (the drop landed against a word, or no completion menu opened for that text) the readable reference text stays behind and says why; the draft is never left broken.
 - **`@` reaches every workspace.** DSH's own file completion indexes the session working directory only, so the plugin registers its own `@` source covering every registered root, backed by a bounded Host index that follows the shipped exclusion rules, walks in background slices, and never blocks a query.
 - **Honest working state.** The status card and the row glyph do not look at a session's own agent alone: a **subagent still working** (even after the main agent stopped) and a **goal still working through its rounds** (the gap between two of them) both read as working.
@@ -151,13 +152,14 @@ node test/run.mjs
 ```
 
 The runner discovers every `*.test.mjs` plus `selftest.mjs` and executes them
-with the same Node executable (currently 158 + 138 + 15). Coverage is directory
+with the same Node executable (currently 160 + 172 + 16). Coverage is directory
 listing and pagination, configuration, migration and every ceiling, the route
 family and its trust fence, path namespaces and cross-platform spellings, the
 conversation tree model, visibility scoping and hidden-target boundaries,
 reference text plus the `@` candidate index and its ranking, every degrading
-path of the drop promotion, working-state folding (subagents and goals), and the
-native bridge's create/rename/durability contracts.
+path of the drop promotion, working-state folding (subagents and goals),
+resource-level staleness comparison, and the native bridge's
+create/rename/durability contracts.
 
 ## Design notes
 
